@@ -1,0 +1,34 @@
+{
+  "name": "strict-transport-security",
+  "description": "Middleware to add Strict-Transport-Security header.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Samuel Erdtman",
+    "email": "samuel@erdtman.se"},
+  "keywords": [
+    "express",
+    "connect",
+    "strict-transport-security",
+    "Strict Transport Security",
+    "security",
+    "SSL",
+    "TLS",
+    "HTTPS",
+    "sts"],
+  "licenses": [{
+    "type": "MIT",
+    "url": "http://www.opensource.org/licenses/MIT"}],
+  "readmeFilename": "README.md",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:samuelerdtman/strict-transport-security.git"},
+  "bugs": {
+    "url": "https://github.com/samuelerdtman/strict-transport-security/issues"},
+  "main": "./lib",
+  "dependencies": {},
+  "devDependencies": {
+    "mocha": "1.13.x"},
+  "scripts": {
+    "test": "mocha -u tdd"},
+  "engines": {
+    "node": ">= 0.4.0"}}
