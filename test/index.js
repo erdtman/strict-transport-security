@@ -20,7 +20,7 @@ suite('Strict Transport Security (STS) middleware', function() {
     sts(null, getRes(result), next);
 
     assert(result.name === "Strict-Transport-Security");
-    assert(result.value === "max-age=108000000");
+    assert(result.value === "max-age=2592000");
   });
 
   test('set direct', function() {
@@ -37,7 +37,6 @@ suite('Strict Transport Security (STS) middleware', function() {
   test('all time parametes', function() {
     var sts = STS.getSTS({
       "max-age" : {
-        milliseconds : 1,
         seconds : 1,
         minutes : 1,
         hours : 1,
@@ -49,7 +48,7 @@ suite('Strict Transport Security (STS) middleware', function() {
     sts(null, getRes(result), next);
 
     assert(result.name === "Strict-Transport-Security");
-    assert(result.value === "max-age=90061001");
+    assert(result.value === "max-age=90061");
   });
 
   test('include subdomains', function() {
