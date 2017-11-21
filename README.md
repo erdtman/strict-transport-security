@@ -3,14 +3,14 @@
 Node.js middleware to add Strict-Transport-Security header according to http://tools.ietf.org/html/rfc6797
 
 ## Install
-
+```
     $ npm install strict-transport-security
-
+```
 ## Tests
-
+```
     $ npm install --dev
     $ npm test
-
+```
 ## Usage
 
 ### Connect
