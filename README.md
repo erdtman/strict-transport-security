@@ -4,7 +4,7 @@ Node.js middleware to add Strict-Transport-Security header according to http://t
 
 ## Install
 ```
-    $ npm install strict-transport-security
+    $ npm install strict-transport-security --save
 ```
 ## Tests
 ```
