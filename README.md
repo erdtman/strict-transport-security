@@ -1,3 +1,6 @@
+
+[![Build Status](https://travis-ci.org/erdtman/strict-transport-security.svg?branch=master)](https://travis-ci.org/erdtman/strict-transport-security)
+[![Coverage Status](https://coveralls.io/repos/github/erdtman/strict-transport-security/badge.svg?branch=master)](https://coveralls.io/github/erdtman/strict-transport-security?branch=master)
 # strict-transport-security
 
 Node.js middleware to add Strict-Transport-Security header according to http://tools.ietf.org/html/rfc6797
