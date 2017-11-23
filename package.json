@@ -1,10 +1,11 @@
 {
   "name": "strict-transport-security",
   "description": "Middleware to add Strict-Transport-Security header.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "author": {
     "name": "Samuel Erdtman",
-    "email": "samuel@erdtman.se"},
+    "email": "samuel@erdtman.se"
+  },
   "keywords": [
     "express",
     "connect",
@@ -14,16 +15,22 @@
     "SSL",
     "TLS",
     "HTTPS",
-    "sts"],
-  "licenses": [{
-    "type": "MIT",
-    "url": "http://www.opensource.org/licenses/MIT"}],
+    "sts"
+  ],
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "http://www.opensource.org/licenses/MIT"
+    }
+  ],
   "readmeFilename": "README.md",
   "repository": {
     "type": "git",
-    "url": "git@github.com:samuelerdtman/strict-transport-security.git"},
+    "url": "git@github.com:samuelerdtman/strict-transport-security.git"
+  },
   "bugs": {
-    "url": "https://github.com/samuelerdtman/strict-transport-security/issues"},
+    "url": "https://github.com/samuelerdtman/strict-transport-security/issues"
+  },
   "main": "lib/index.js",
   "dependencies": {},
   "devDependencies": {
@@ -47,4 +54,6 @@
     "dev": "npm-run-all -p --silent watch live"
   },
   "engines": {
-    "node": ">= 0.4.0"}}
+    "node": ">= 0.4.0"
+  }
+}
