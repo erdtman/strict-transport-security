@@ -64,3 +64,28 @@ test('include subdomains', t => {
   t.is(result.name, 'Strict-Transport-Security');
   t.is(result.value, 'max-age=456789; includeSubDomains');
 });
+
+test('preload', t => {
+  const sts = STS.getSTS({
+    'max-age': 456789,
+    'preload': true
+  });
+  const result = {};
+  sts(null, getRes(result), next);
+
+  t.is(result.name, 'Strict-Transport-Security');
+  t.is(result.value, 'max-age=456789; preload');
+});
+
+test('include subdomains and preload', t => {
+  const sts = STS.getSTS({
+    'max-age': 456789,
+    'includeSubDomains': true,
+    'preload': true
+  });
+  const result = {};
+  sts(null, getRes(result), next);
+
+  t.is(result.name, 'Strict-Transport-Security');
+  t.is(result.value, 'max-age=456789; includeSubDomains; preload');
+});
