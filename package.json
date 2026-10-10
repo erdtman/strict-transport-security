@@ -32,8 +32,7 @@
     "lib"
   ],
   "publishConfig": {
-    "access": "public",
-    "provenance": true
+    "access": "public"
   },
   "dependencies": {},
   "scripts": {
