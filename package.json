@@ -36,11 +36,9 @@
   },
   "dependencies": {},
   "scripts": {
-    "clean": "node -e \"require('node:fs').rmSync('coverage', { recursive: true, force: true })\"",
     "test": "node --test",
     "coverage": "node --test --experimental-test-coverage --test-coverage-exclude=\"test/**\"",
-    "coverage:check": "npm run coverage -- --test-coverage-lines=100 --test-coverage-branches=100 --test-coverage-functions=100",
-    "coverage:lcov": "node -e \"require('node:fs').mkdirSync('coverage', { recursive: true })\" && node --test --experimental-test-coverage --test-coverage-exclude=\"test/**\" --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=coverage/lcov.info"
+    "coverage:check": "npm run coverage -- --test-coverage-lines=100 --test-coverage-branches=100 --test-coverage-functions=100"
   },
   "engines": {
     "node": ">=20.0.0"

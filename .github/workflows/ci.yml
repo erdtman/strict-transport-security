@@ -34,8 +34,3 @@ jobs:
         with:
           node-version: 24
       - run: npm run coverage:check
-      - run: npm run coverage:lcov
-      - uses: coverallsapp/github-action@v2
-        with:
-          file: coverage/lcov.info
-          format: lcov

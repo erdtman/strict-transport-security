@@ -1,5 +1,4 @@
 [![CI](https://github.com/erdtman/strict-transport-security/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/erdtman/strict-transport-security/actions/workflows/ci.yml)
-[![Coverage Status](https://coveralls.io/repos/github/erdtman/strict-transport-security/badge.svg?branch=master)](https://coveralls.io/github/erdtman/strict-transport-security?branch=master)
 
 # strict-transport-security
 
