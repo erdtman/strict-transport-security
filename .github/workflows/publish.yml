@@ -41,7 +41,5 @@ jobs:
 
       # Submits the tarball to npm's staging area. It does not go live until a
       # maintainer approves it with 2FA, which cannot be done from CI.
+      # Prints the stage id needed to approve the release.
       - run: npm stage publish
-
-      - name: Show the staged release awaiting approval
-        run: npm stage list strict-transport-security
