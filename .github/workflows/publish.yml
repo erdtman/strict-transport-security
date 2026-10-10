@@ -7,13 +7,14 @@ on:
 
 permissions:
   contents: read
-  # Required for npm provenance: lets the job mint an OIDC token that npm
-  # verifies to attest where this package was built from.
+  # Required for trusted publishing: lets the job mint an OIDC token that npm
+  # verifies to attest where this package was built from. Provenance is then
+  # generated automatically, with no --provenance flag needed.
   id-token: write
 
 jobs:
-  publish:
-    name: publish to npm
+  stage:
+    name: stage release on npm
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,8 +23,8 @@ jobs:
           node-version: 24
           registry-url: https://registry.npmjs.org
 
-      # Trusted publishing and provenance need a recent npm; the version
-      # bundled with Node may lag behind.
+      # `npm stage publish` needs npm 11.15.0 or later, which is newer than
+      # the npm bundled with Node 24.
       - run: npm install -g npm@latest
 
       - name: Verify the tag matches package.json
@@ -38,4 +39,9 @@ jobs:
 
       - run: node --test
 
-      - run: npm publish --provenance --access public
+      # Submits the tarball to npm's staging area. It does not go live until a
+      # maintainer approves it with 2FA, which cannot be done from CI.
+      - run: npm stage publish
+
+      - name: Show the staged release awaiting approval
+        run: npm stage list strict-transport-security

@@ -110,14 +110,27 @@ built-in coverage reporter and require Node.js 22 or later.
 
 ## Releasing
 
-Releases are published by GitHub Actions, not from a developer machine. Publishing a GitHub
-Release triggers `.github/workflows/publish.yml`, which verifies the tag matches
-`package.json`, runs the tests, and publishes with
-[npm provenance](https://docs.npmjs.com/generating-provenance-statements) so the published
-tarball is cryptographically linked to the commit and workflow that built it.
+Releases go through npm's [staged publishing](https://docs.npmjs.com/staged-publishing),
+so no release reaches the registry without a human approving it.
 
-`publishConfig.provenance` is enabled, which means `npm publish` only works from CI -- a
-local publish cannot generate an attestation and will fail. That is deliberate.
+1. Bump the version in `package.json` and merge it.
+2. Tag and create a GitHub Release. That triggers
+   `.github/workflows/publish.yml`, which checks the tag against
+   `package.json`, runs the tests, and submits the tarball with
+   `npm stage publish`.
+3. Approve it with 2FA, either from the **Staged Packages** tab on npmjs.com
+   or with `npm stage approve <stage-id>`. Until then the version is staged
+   and not installable.
+
+The workflow authenticates by OIDC as a trusted publisher, so there is no npm
+token in CI. Its npm permissions are limited to staging, meaning a direct
+`npm publish` from the workflow is rejected.
+[Provenance](https://docs.npmjs.com/generating-provenance-statements) is
+generated automatically for trusted publishes from a public repository, which
+links the published tarball to the commit and workflow that built it.
+
+Before reviewing a staged release you can inspect it with
+`npm stage view <stage-id>` or `npm stage download <stage-id>`.
 
 ## License
 
