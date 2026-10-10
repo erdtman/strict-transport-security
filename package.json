@@ -1,7 +1,8 @@
 {
   "name": "strict-transport-security",
   "description": "Middleware to add Strict-Transport-Security header.",
-  "version": "0.3.0",
+  "version": "0.4.0",
+  "license": "MIT",
   "author": {
     "name": "Samuel Erdtman",
     "email": "samuel@erdtman.se"
@@ -15,45 +16,34 @@
     "SSL",
     "TLS",
     "HTTPS",
-    "sts"
+    "sts",
+    "hsts"
   ],
-  "licenses": [
-    {
-      "type": "MIT",
-      "url": "http://www.opensource.org/licenses/MIT"
-    }
-  ],
-  "readmeFilename": "README.md",
   "repository": {
     "type": "git",
-    "url": "git@github.com:samuelerdtman/strict-transport-security.git"
+    "url": "git+https://github.com/erdtman/strict-transport-security.git"
   },
   "bugs": {
-    "url": "https://github.com/samuelerdtman/strict-transport-security/issues"
+    "url": "https://github.com/erdtman/strict-transport-security/issues"
   },
+  "homepage": "https://github.com/erdtman/strict-transport-security#readme",
   "main": "lib/index.js",
-  "dependencies": {},
-  "devDependencies": {
-    "ava": "*",
-    "live-server": "*",
-    "npm-run-all": "*",
-    "nyc": "*",
-    "semistandard": "*",
-    "watch": "*"
+  "files": [
+    "lib"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   },
+  "dependencies": {},
   "scripts": {
-    "clean": "rm -rf coverage/ .nyc_output/",
-    "pretest": "semistandard --fix",
-    "test": "ava test/*.js",
-    "coverage": "nyc npm test",
-    "coveragehtml": "nyc report -r html",
-    "precoveragehtml": "npm run coverage",
-    "coveralls": "nyc report --reporter=text-lcov | coveralls",
-    "live": "live-server -q --port=4003 --ignorePattern='(js|css|png)$' coverage",
-    "watch": "watch 'npm run coveragehtml' test lib",
-    "dev": "npm-run-all -p --silent watch live"
+    "clean": "node -e \"require('node:fs').rmSync('coverage', { recursive: true, force: true })\"",
+    "test": "node --test",
+    "coverage": "node --test --experimental-test-coverage --test-coverage-exclude=\"test/**\"",
+    "coverage:check": "npm run coverage -- --test-coverage-lines=100 --test-coverage-branches=100 --test-coverage-functions=100",
+    "coverage:lcov": "node -e \"require('node:fs').mkdirSync('coverage', { recursive: true })\" && node --test --experimental-test-coverage --test-coverage-exclude=\"test/**\" --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=coverage/lcov.info"
   },
   "engines": {
-    "node": ">= 0.4.0"
+    "node": ">=20.0.0"
   }
 }
