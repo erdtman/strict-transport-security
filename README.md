@@ -41,7 +41,7 @@ app.listen(3000, () => {
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
-| `max-age` | number, or object of time units | 30 days | Policy lifetime. A number is a count of seconds; an object may combine `seconds`, `minutes`, `hours` and `days`. |
+| `max-age` | number, or object of time units | 30 days | Policy lifetime. A number is a count of seconds; an object may combine `seconds`, `minutes`, `hours` and `days`. The total must be a non-negative integer no greater than `Number.MAX_SAFE_INTEGER`. |
 | `includeSubDomains` | boolean | `false` | Adds the `includeSubDomains` directive. |
 | `preload` | boolean | `false` | Adds the `preload` directive. |
 | `secureOnly` | boolean | `false` | Sends the header only over a secure connection, as RFC 6797 requires. See [Conformance](#conformance). |
@@ -63,16 +63,28 @@ a `max-age` of at least one year together with `includeSubDomains`; this module 
 
 ### Invalid options
 
-`getSTS` validates `max-age` when the middleware is created, so a bad configuration fails
-at startup rather than silently emitting a policy you did not intend:
+`getSTS` validates its options when the middleware is created, so a bad configuration
+fails at startup rather than silently emitting a policy you did not intend:
 
 ```js
-sts.getSTS({ 'max-age': {} });        // TypeError: no recognized time units
-sts.getSTS({ 'max-age': { week: 2 } }); // TypeError: no recognized time units
-sts.getSTS({ 'max-age': '600' });     // TypeError: must be a number or an object of time units
-sts.getSTS({ 'max-age': -1 });        // RangeError: must be a non-negative integer
-sts.getSTS({ 'max-age': 1.5 });       // RangeError: must be a non-negative integer
+sts.getSTS({ 'max-age': {} });           // TypeError: no recognized time units
+sts.getSTS({ 'max-age': '600' });        // TypeError: must be a number or an object of time units
+sts.getSTS({ 'max-age': -1 });           // RangeError: must be a non-negative integer
+sts.getSTS({ 'max-age': 1.5 });          // RangeError: must be a non-negative integer
+sts.getSTS({ 'max-age': 1e21 });         // RangeError: must be a non-negative integer no greater than 9007199254740991
+sts.getSTS({ maxAge: 600 });             // TypeError: unknown option 'maxAge'
+sts.getSTS({ includeSubdomains: true }); // TypeError: unknown option 'includeSubdomains'
+sts.getSTS({ 'max-age': { week: 2 } });  // TypeError: unknown time unit 'week'
 ```
+
+Unknown options and unknown time units are rejected rather than ignored: a typo such as
+`includeSubdomains` or `maxAge` would otherwise leave you with a quietly weaker policy
+than the one you wrote. Earlier versions accepted them silently.
+
+An upper bound of `Number.MAX_SAFE_INTEGER` comes from the header grammar. RFC 6797
+[section 6.1.1](https://tools.ietf.org/html/rfc6797#section-6.1.1) defines `max-age` as
+`1*DIGIT`, and larger numbers either stringify in exponential notation, which no browser
+parses, or have already lost precision.
 
 `max-age: 0` is accepted — RFC 6797 defines it as the signal telling a browser to delete a
 stored policy.
@@ -100,12 +112,28 @@ or when the underlying socket is encrypted.
 There is nothing to install -- this package has no dependencies, runtime or development.
 
 ```
-$ npm test          # run the test suite
-$ npm run coverage  # test suite with a coverage report
+$ npm test                # run the test suite
+$ npm run test:watch      # re-run it on every change
+$ npm run coverage        # test suite with a coverage report
+$ npm run coverage:check  # fail below 100% lines, branches and functions
 ```
 
 Tests use the Node.js built-in test runner and `node:assert`. The coverage scripts use the
 built-in coverage reporter and require Node.js 22 or later.
+
+| File | What it covers |
+| --- | --- |
+| `test/index.js` | Options, validation and the header value, against a stub response. |
+| `test/http.test.js` | The header on the wire, through a real `node:http` server. |
+| `test/esm.test.mjs` | The `import` surface, which CommonJS tests cannot reach. |
+| `test/docs.test.js` | Every value and error this README documents, plus the example. |
+| `test/pack.test.js` | The published tarball: its contents load and work. |
+
+Coverage counts `lib` only and is required to stay at 100% of lines, branches and
+functions. It is a floor, not a goal: a saturated percentage says nothing about whether the
+header is still valid, so the behavioural guards above -- the grammar assertion in
+`test/index.js`, the wire-level tests and the documentation tests -- are what the suite
+actually leans on.
 
 ## Releasing
 
