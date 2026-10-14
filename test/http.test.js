@@ -60,18 +60,32 @@ test('the response is not held up, next() runs and the body still arrives', asyn
   assert.strictEqual(response.status, 200);
 });
 
-test('a real ServerResponse accepts the header value for every option shape', async (t) => {
-  // setHeader validates the value, so this catches characters that the stub
-  // response in test/index.js would happily accept.
-  const options = [
-    undefined,
-    { 'max-age': 0 },
-    { 'max-age': Number.MAX_SAFE_INTEGER },
-    { 'max-age': { seconds: 1, minutes: 2, hours: 3, days: 4 }, includeSubDomains: true, preload: true }
-  ];
-  for (const option of options) {
-    const response = await serve(t, STS.getSTS(option));
-    const value = response.headers.get('strict-transport-security');
-    assert.match(value, /^max-age=\d+(; includeSubDomains)?(; preload)?$/, `for ${JSON.stringify(option)}`);
-  }
+test('a real ServerResponse accepts the default header value', async (t) => {
+  // setHeader validates the value it is given, so these four cover what the
+  // stub response in test/index.js would happily accept.
+  const response = await serve(t, STS.getSTS());
+  assert.strictEqual(response.headers.get('strict-transport-security'), 'max-age=2592000');
+});
+
+test('a real ServerResponse accepts a zero max-age', async (t) => {
+  const response = await serve(t, STS.getSTS({ 'max-age': 0 }));
+  assert.strictEqual(response.headers.get('strict-transport-security'), 'max-age=0');
+});
+
+test('a real ServerResponse accepts the largest safe max-age', async (t) => {
+  const response = await serve(t, STS.getSTS({ 'max-age': Number.MAX_SAFE_INTEGER }));
+  assert.strictEqual(response.headers.get('strict-transport-security'), 'max-age=9007199254740991');
+});
+
+test('a real ServerResponse accepts every directive at once', async (t) => {
+  const options = {
+    'max-age': { seconds: 1, minutes: 2, hours: 3, days: 4 },
+    includeSubDomains: true,
+    preload: true
+  };
+  const response = await serve(t, STS.getSTS(options));
+  assert.strictEqual(
+    response.headers.get('strict-transport-security'),
+    'max-age=356521; includeSubDomains; preload'
+  );
 });

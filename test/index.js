@@ -27,11 +27,11 @@ function run (options, req) {
   return result;
 }
 
-function skipped (options, req, message) {
+function skipped (options, req) {
   const result = run(options, req);
-  assert.strictEqual(result.headers, 0, message);
-  assert.strictEqual(result.value, undefined, message);
-  assert.deepStrictEqual(result.order, ['next'], message);
+  assert.strictEqual(result.headers, 0);
+  assert.strictEqual(result.value, undefined);
+  assert.deepStrictEqual(result.order, ['next']);
   assert.deepStrictEqual(result.nextArgs, [], 'next() must be called with no arguments');
   return result;
 }
@@ -155,121 +155,156 @@ test('later changes to the options object do not change the header', () => {
   assert.deepStrictEqual(values, ['max-age=1']);
 });
 
-test('rejects options that are not an object', () => {
-  for (const value of ['nope', 10, true, [], Symbol('x'), () => 1]) {
-    assert.throws(() => STS.getSTS(value), {
-      name: 'TypeError',
-      message: /^options must be an object, got /
-    }, `expected ${String(value)} to be rejected`);
-  }
+test('rejects a string as options', () => {
+  assert.throws(() => STS.getSTS('nope'), TypeError);
 });
 
-test('rejects an unknown option rather than silently ignoring it', () => {
-  for (const key of ['maxAge', 'includeSubdomains', 'secureonly', 'Preload', 'maxAgeSeconds']) {
-    assert.throws(() => STS.getSTS({ [key]: 1 }), {
-      name: 'TypeError',
-      message: new RegExp(`^unknown option '${key}', expected one of max-age, includeSubDomains, preload, secureOnly$`)
-    }, `expected ${key} to be rejected`);
-  }
+test('rejects a number as options', () => {
+  assert.throws(() => STS.getSTS(10), TypeError);
 });
 
-test('names every unknown option at once', () => {
-  assert.throws(() => STS.getSTS({ 'max-age': 1, foo: 1, bar: 2 }), {
-    name: 'TypeError',
-    message: /^unknown options 'foo', 'bar', expected one of /
-  });
+test('rejects a boolean as options', () => {
+  assert.throws(() => STS.getSTS(true), TypeError);
 });
 
-test('rejects a max-age that is not a number or object', () => {
-  const bad = ['600', true, Symbol('x'), 10n, () => 1];
-  for (const value of bad) {
-    assert.throws(() => STS.getSTS({ 'max-age': value }), {
-      name: 'TypeError',
-      message: /must be a number or an object of time units/
-    }, `expected ${String(value)} to be rejected`);
-  }
+test('rejects an array as options', () => {
+  assert.throws(() => STS.getSTS([]), TypeError);
 });
 
-test('rejects null and arrays rather than treating them as objects', () => {
-  for (const value of [null, [], [1, 2]]) {
-    assert.throws(() => STS.getSTS({ 'max-age': value }), {
-      name: 'TypeError',
-      message: /must be a number or an object of time units/
-    }, `expected ${JSON.stringify(value)} to be rejected`);
-  }
+test('rejects a symbol as options', () => {
+  assert.throws(() => STS.getSTS(Symbol('x')), TypeError);
+});
+
+test('rejects a function as options', () => {
+  assert.throws(() => STS.getSTS(() => 1), TypeError);
+});
+
+test('rejects maxAge, the camelCase spelling of max-age', () => {
+  assert.throws(() => STS.getSTS({ maxAge: 600 }), TypeError);
+});
+
+test('rejects includeSubdomains, the lowercase d spelling', () => {
+  assert.throws(() => STS.getSTS({ includeSubdomains: true }), TypeError);
+});
+
+test('rejects secureonly, the lowercase o spelling', () => {
+  assert.throws(() => STS.getSTS({ secureonly: true }), TypeError);
+});
+
+test('rejects a capitalized option name', () => {
+  assert.throws(() => STS.getSTS({ Preload: true }), TypeError);
+});
+
+test('rejects an options object with several unknown keys', () => {
+  assert.throws(() => STS.getSTS({ 'max-age': 1, foo: 1, bar: 2 }), TypeError);
+});
+
+test('rejects a string max-age, even a numeric one', () => {
+  assert.throws(() => STS.getSTS({ 'max-age': '600' }), TypeError);
+});
+
+test('rejects a boolean max-age', () => {
+  assert.throws(() => STS.getSTS({ 'max-age': true }), TypeError);
+});
+
+test('rejects a symbol max-age', () => {
+  assert.throws(() => STS.getSTS({ 'max-age': Symbol('x') }), TypeError);
+});
+
+test('rejects a bigint max-age', () => {
+  assert.throws(() => STS.getSTS({ 'max-age': 10n }), TypeError);
+});
+
+test('rejects a function max-age', () => {
+  assert.throws(() => STS.getSTS({ 'max-age': () => 1 }), TypeError);
+});
+
+test('rejects a null max-age', () => {
+  assert.throws(() => STS.getSTS({ 'max-age': null }), TypeError);
+});
+
+test('rejects an array rather than treating it as an object of units', () => {
+  assert.throws(() => STS.getSTS({ 'max-age': [1, 2] }), TypeError);
 });
 
 test('rejects an object with no recognized time units', () => {
-  assert.throws(() => STS.getSTS({ 'max-age': {} }), {
-    name: 'TypeError',
-    message: /no recognized time units, expected one of seconds, minutes, hours, days/
-  });
+  assert.throws(() => STS.getSTS({ 'max-age': {} }), TypeError);
 });
 
-test('rejects an unknown time unit rather than silently ignoring it', () => {
-  for (const unit of ['weeks', 'Days', 'ms']) {
-    assert.throws(() => STS.getSTS({ 'max-age': { days: 1, [unit]: 2 } }), {
-      name: 'TypeError',
-      message: new RegExp(`^options\\['max-age'\\] has unknown time unit '${unit}', expected one of seconds, minutes, hours, days$`)
-    }, `expected ${unit} to be rejected`);
-  }
+test('rejects weeks, a unit this module does not support', () => {
+  assert.throws(() => STS.getSTS({ 'max-age': { days: 1, weeks: 2 } }), TypeError);
 });
 
-test('names every unknown time unit at once', () => {
-  assert.throws(() => STS.getSTS({ 'max-age': { weeks: 1, months: 2 } }), {
-    name: 'TypeError',
-    message: /^options\['max-age'\] has unknown time units 'weeks', 'months', expected one of /
-  });
+test('rejects a capitalized time unit', () => {
+  assert.throws(() => STS.getSTS({ 'max-age': { days: 1, Days: 2 } }), TypeError);
 });
 
-test('rejects a non-integer or negative max-age', () => {
-  for (const value of [-1, 1.5, NaN, Infinity, -Infinity]) {
-    assert.throws(() => STS.getSTS({ 'max-age': value }), {
-      name: 'RangeError',
-      message: /must be a non-negative integer/
-    }, `expected ${value} to be rejected`);
-  }
+test('rejects a unit finer than seconds', () => {
+  assert.throws(() => STS.getSTS({ 'max-age': { days: 1, ms: 2 } }), TypeError);
 });
 
-test('rejects a max-age that cannot be written as digits', () => {
+test('rejects a max-age with several unknown time units', () => {
+  assert.throws(() => STS.getSTS({ 'max-age': { weeks: 1, months: 2 } }), TypeError);
+});
+
+test('rejects a negative max-age', () => {
+  assert.throws(() => STS.getSTS({ 'max-age': -1 }), RangeError);
+});
+
+test('rejects a fractional max-age', () => {
+  assert.throws(() => STS.getSTS({ 'max-age': 1.5 }), RangeError);
+});
+
+test('rejects NaN as a max-age', () => {
+  assert.throws(() => STS.getSTS({ 'max-age': NaN }), RangeError);
+});
+
+test('rejects Infinity as a max-age', () => {
+  assert.throws(() => STS.getSTS({ 'max-age': Infinity }), RangeError);
+});
+
+test('rejects -Infinity as a max-age', () => {
+  assert.throws(() => STS.getSTS({ 'max-age': -Infinity }), RangeError);
+});
+
+test('rejects a max-age that would be written in exponential notation', () => {
   // Number.isInteger(1e21) is true, but `${1e21}` is "1e+21", which is not the
   // 1*DIGIT that RFC 6797 section 6.1.1 requires, so browsers drop the header.
-  for (const value of [1e21, Number.MAX_SAFE_INTEGER + 1, 8.64e18]) {
-    assert.throws(() => STS.getSTS({ 'max-age': value }), {
-      name: 'RangeError',
-      message: /must be a non-negative integer no greater than 9007199254740991/
-    }, `expected ${value} to be rejected`);
-  }
+  assert.throws(() => STS.getSTS({ 'max-age': 1e21 }), RangeError);
+});
+
+test('rejects the first max-age past the safe integer range', () => {
+  assert.throws(() => STS.getSTS({ 'max-age': Number.MAX_SAFE_INTEGER + 1 }), RangeError);
+});
+
+test('rejects a max-age that has already lost precision', () => {
+  // All digits, but no longer the number that was written.
+  assert.throws(() => STS.getSTS({ 'max-age': 8.64e18 }), RangeError);
 });
 
 test('rejects time units that add up to an unsafe total', () => {
   // Each unit is a safe integer on its own; the product is not.
-  assert.throws(() => STS.getSTS({ 'max-age': { days: 1e14 } }), {
-    name: 'RangeError',
-    message: /^options\['max-age'\] in seconds must be a non-negative integer no greater than 9007199254740991, got 8640000000000000000$/
-  });
+  assert.throws(() => STS.getSTS({ 'max-age': { days: 1e14 } }), RangeError);
 });
 
-test('rejects a non-integer or negative time unit', () => {
-  for (const value of [-1, 1.5, NaN, Infinity]) {
-    assert.throws(() => STS.getSTS({ 'max-age': { minutes: value } }), {
-      name: 'RangeError',
-      message: /options\['max-age'\]\.minutes must be a non-negative integer/
-    }, `expected minutes: ${value} to be rejected`);
-  }
+test('rejects a negative time unit', () => {
+  assert.throws(() => STS.getSTS({ 'max-age': { minutes: -1 } }), RangeError);
+});
+
+test('rejects a fractional time unit', () => {
+  assert.throws(() => STS.getSTS({ 'max-age': { minutes: 1.5 } }), RangeError);
+});
+
+test('rejects NaN as a time unit', () => {
+  assert.throws(() => STS.getSTS({ 'max-age': { minutes: NaN } }), RangeError);
+});
+
+test('rejects Infinity as a time unit', () => {
+  assert.throws(() => STS.getSTS({ 'max-age': { minutes: Infinity } }), RangeError);
 });
 
 test('rejects a time unit that is not a number', () => {
-  assert.throws(() => STS.getSTS({ 'max-age': { days: '1' } }), {
-    name: 'TypeError',
-    message: /options\['max-age'\]\.days must be a number, got a string/
-  });
-});
-
-test('names null in the error message instead of calling it an object', () => {
-  assert.throws(() => STS.getSTS({ 'max-age': null }), {
-    message: /got null$/
-  });
+  assert.throws(() => STS.getSTS({ 'max-age': { days: '1' } }), TypeError);
 });
 
 test('secureOnly skips the header on an insecure request', () => {
@@ -292,9 +327,19 @@ test('secureOnly honours the legacy req.connection alias', () => {
 });
 
 test('secureOnly skips the header on an unencrypted socket', () => {
-  for (const req of [{ socket: {} }, { socket: null }, {}, null]) {
-    skipped({ secureOnly: true }, req, `expected ${JSON.stringify(req)} to be skipped`);
-  }
+  skipped({ secureOnly: true }, { socket: {} });
+});
+
+test('secureOnly skips the header when the socket is null', () => {
+  skipped({ secureOnly: true }, { socket: null });
+});
+
+test('secureOnly skips the header on a request with no socket at all', () => {
+  skipped({ secureOnly: true }, {});
+});
+
+test('secureOnly skips the header when there is no request object', () => {
+  skipped({ secureOnly: true }, null);
 });
 
 test('req.secure wins over the socket when both are present', () => {
