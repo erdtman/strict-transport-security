@@ -1,7 +1,7 @@
 {
   "name": "strict-transport-security",
   "description": "Middleware to add Strict-Transport-Security header.",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "license": "MIT",
   "author": {
     "name": "Samuel Erdtman",
