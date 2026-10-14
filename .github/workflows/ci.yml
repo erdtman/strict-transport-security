@@ -32,6 +32,20 @@ jobs:
       # No install step: this package has no dependencies, runtime or dev.
       - run: node --test
 
+  # The publish workflow upgrades npm before it packs the tarball, so the suite
+  # has to pass on that npm too. npm 12 changed the shape of `npm pack --json`,
+  # which only the release run would otherwise have discovered.
+  npm-latest:
+    name: test (npm latest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - run: npm install -g npm@latest
+      - run: node --test
+
   coverage:
     name: coverage
     runs-on: ubuntu-latest
