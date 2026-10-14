@@ -123,17 +123,22 @@ built-in coverage reporter and require Node.js 22 or later.
 
 | File | What it covers |
 | --- | --- |
-| `test/index.js` | Options, validation and the header value, against a stub response. |
+| `test/validation.test.js` | What `getSTS` rejects, by error type. |
+| `test/header.test.js` | The header value each set of options produces. |
+| `test/middleware.test.js` | The response and `next()` contract, and `secureOnly`. |
 | `test/http.test.js` | The header on the wire, through a real `node:http` server. |
 | `test/esm.test.mjs` | The `import` surface, which CommonJS tests cannot reach. |
 | `test/docs.test.js` | Every value and error this README documents, plus the example. |
 | `test/pack.test.js` | The published tarball: its contents load and work. |
 
+Tests use a real `http.ServerResponse` rather than a stub, so `getHeader` and
+`getHeaderNames` report what a server would actually send, and no test helper stands
+between the reader and what is being asserted.
+
 Coverage counts `lib` only and is required to stay at 100% of lines, branches and
 functions. It is a floor, not a goal: a saturated percentage says nothing about whether the
-header is still valid, so the behavioural guards above -- the grammar assertion in
-`test/index.js`, the wire-level tests and the documentation tests -- are what the suite
-actually leans on.
+header is still valid, so the behavioural guards -- the exact header values, the wire-level
+tests and the documentation tests -- are what the suite actually leans on.
 
 ## Releasing
 
