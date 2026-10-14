@@ -14,6 +14,17 @@ const { execFileSync } = require('node:child_process');
 const ROOT = path.join(__dirname, '..');
 const PKG = require('../package.json');
 
+// npm 10 and 11 report `pack --json` as an array of results; npm 12 reports an
+// object keyed by package name. The publish workflow upgrades npm before it
+// packs, so this has to read both.
+function packed (output) {
+  const reported = JSON.parse(output);
+  const results = (Array.isArray(reported) ? reported : Object.values(reported)).flat();
+  const [result] = results;
+  assert.strictEqual(typeof result?.filename, 'string', `npm pack --json reported an unfamiliar shape: ${output}`);
+  return result;
+}
+
 function pack (t) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'sts-pack-'));
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
@@ -24,7 +35,7 @@ function pack (t) {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'inherit']
   });
-  const [{ filename, files }] = JSON.parse(output);
+  const { filename, files } = packed(output);
 
   execFileSync('tar', ['-xzf', path.join(directory, filename), '-C', directory]);
   return { directory: path.join(directory, 'package'), files: files.map((file) => file.path).sort() };
