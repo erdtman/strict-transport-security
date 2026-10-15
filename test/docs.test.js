@@ -103,10 +103,19 @@ test('the usage block and the example file are the same code', () => {
   );
 });
 
-test('the example parses, even though express is not installed', () => {
-  // `node --check` needs no dependencies, so a syntax error or a stale API in
-  // the example cannot sit there unnoticed.
-  execFileSync(process.execPath, ['--check', `${__dirname}/../examples/express.js`]);
+// `node --check` needs no dependencies, so a syntax error or a stale API in an
+// example cannot sit there unnoticed, framework installed or not.
+for (const file of fs.readdirSync(`${__dirname}/../examples`).sort()) {
+  test(`examples/${file} parses`, () => {
+    execFileSync(process.execPath, ['--check', `${__dirname}/../examples/${file}`]);
+  });
+}
+
+test('the README documents a factory for every framework, and no others', () => {
+  const [, section] = README.match(/\n## Frameworks\n([\s\S]*?)\n### /);
+  const factories = [...section.matchAll(/^\| [^|]+ \| `(\w+)` \|/gm)].map((match) => match[1]);
+
+  assert.deepStrictEqual(factories.sort(), Object.keys(STS).sort());
 });
 
 test('the README states the supported Node.js version from package.json', () => {
