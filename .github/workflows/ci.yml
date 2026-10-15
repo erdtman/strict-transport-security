@@ -46,6 +46,19 @@ jobs:
       - run: npm install -g npm@latest
       - run: node --test
 
+  # The default suite skips the real frameworks, so that `npm test` needs no
+  # dependencies. They are installed here instead, which is what catches a
+  # breaking change in one of them before a user does.
+  frameworks:
+    name: test (real frameworks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - run: npm run test:frameworks
+
   coverage:
     name: coverage
     runs-on: ubuntu-latest

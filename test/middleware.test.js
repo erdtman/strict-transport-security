@@ -10,9 +10,12 @@ const assert = require('node:assert');
 const http = require('node:http');
 const STS = require('../');
 
-test('the module exposes nothing but getSTS', () => {
-  assert.deepStrictEqual(Object.keys(STS), ['getSTS']);
-  assert.strictEqual(typeof STS.getSTS, 'function');
+test('the module exposes the compile step and one factory per framework', () => {
+  // The names are the public API, and the order is what an `import` sees.
+  assert.deepStrictEqual(Object.keys(STS), ['getSTSHeader', 'getSTS', 'getFastifySTS', 'getKoaSTS', 'getHonoSTS', 'getHapiSTS', 'getHeadersSTS']);
+  for (const name of Object.keys(STS)) {
+    assert.strictEqual(typeof STS[name], 'function', `${name} is not a function`);
+  }
 });
 
 test('the middleware takes three arguments', () => {

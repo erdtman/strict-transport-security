@@ -1,6 +1,6 @@
 {
   "name": "strict-transport-security",
-  "description": "Middleware to add Strict-Transport-Security header.",
+  "description": "Middleware to add a Strict-Transport-Security header, on Express, Connect, Fastify, Koa, Hono, Hapi, or anything that can set a header.",
   "version": "0.5.0",
   "license": "MIT",
   "author": {
@@ -10,6 +10,11 @@
   "keywords": [
     "express",
     "connect",
+    "fastify",
+    "koa",
+    "hapi",
+    "hono",
+    "middleware",
     "strict-transport-security",
     "Strict Transport Security",
     "security",
@@ -38,6 +43,7 @@
   "scripts": {
     "test": "node --test",
     "test:watch": "node --test --watch",
+    "test:frameworks": "npm install --no-save --no-package-lock express fastify koa @hapi/hapi hono && node --test test/frameworks.test.js",
     "coverage": "node --test --experimental-test-coverage --test-coverage-exclude=\"test/**\"",
     "coverage:check": "npm run coverage -- --test-coverage-lines=100 --test-coverage-branches=100 --test-coverage-functions=100"
   },
