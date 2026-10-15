@@ -2,7 +2,8 @@
 
 # strict-transport-security
 
-Node.js middleware to add Strict-Transport-Security header according to [RFC6797](http://tools.ietf.org/html/rfc6797)
+Adds a Strict-Transport-Security header according to [RFC6797](http://tools.ietf.org/html/rfc6797),
+on Express, Connect, Fastify, Koa, Hono, Hapi, or anything that can set a header.
 
 Zero dependencies. Requires Node.js 20 or later.
 
@@ -37,6 +38,134 @@ app.listen(3000, () => {
 });
 ```
 
+## Frameworks
+
+A policy compiles to exactly one header, so fitting a framework is only a matter
+of knowing how it sets one -- and, for [`secureOnly`](#conformance), how it
+reports the scheme a request arrived over. Every factory below takes the same
+[options](#options) and validates them once, when it is called, so a bad
+configuration fails at startup rather than on every request.
+
+| Framework | Factory | Mounted as |
+| --- | --- | --- |
+| Express, Connect, restify, NestJS on Express | `getSTS` | middleware, `(req, res, next)` |
+| Fastify | `getFastifySTS` | an `onRequest` hook |
+| Koa | `getKoaSTS` | middleware, `(ctx, next)` |
+| Hono | `getHonoSTS` | middleware, `(c, next)` |
+| Hapi | `getHapiSTS` | an `onPreResponse` extension |
+| Next.js middleware, h3/Nitro, Workers, Deno, Bun, Elysia | `getHeadersSTS` | applied to a Fetch `Headers` |
+| anything else | `getSTSHeader` | a `{ name, value, secureOnly }` triple you set yourself |
+
+Runnable versions of each of these are in [`examples/`](examples).
+
+### Fastify
+
+```js
+const sts = require('strict-transport-security');
+const fastify = require('fastify')();
+
+fastify.addHook('onRequest', sts.getFastifySTS({ 'max-age': { days: 30 } }));
+
+// A route level hook runs after the instance wide one, so it wins.
+fastify.get('/local', { onRequest: sts.getFastifySTS({ 'max-age': { days: 10 } }) }, async () => 'ok');
+```
+
+### Koa
+
+```js
+const sts = require('strict-transport-security');
+const Koa = require('koa');
+const app = new Koa();
+
+const localSTS = sts.getKoaSTS({ 'max-age': { days: 10 } });
+
+app.use(sts.getKoaSTS({ 'max-age': { days: 30 } }));
+
+// Koa has no router of its own, so a route local policy is dispatched by path.
+// Whichever way it is reached, the more specific middleware is the inner one.
+app.use((ctx, next) => (ctx.path === '/local' ? localSTS(ctx, next) : next()));
+```
+
+### Hono
+
+```js
+const sts = require('strict-transport-security');
+const { Hono } = require('hono');
+const app = new Hono();
+
+app.use('*', sts.getHonoSTS({ 'max-age': { days: 30 } }));
+app.get('/local', sts.getHonoSTS({ 'max-age': { days: 10 } }), (c) => c.text('ok'));
+```
+
+The header is set before `next()`, not after, because Hono's response phase
+unwinds outermost-last: setting it afterwards would let the app-wide policy
+overwrite the route-local one.
+
+### Hapi
+
+```js
+const sts = require('strict-transport-security');
+const Hapi = require('@hapi/hapi');
+const server = Hapi.server({ port: 3000 });
+
+server.ext('onPreResponse', sts.getHapiSTS({ 'max-age': { days: 30 } }));
+
+server.route({
+  method: 'GET',
+  path: '/local',
+  options: { ext: { onPreResponse: { method: sts.getHapiSTS({ 'max-age': { days: 10 } }) } } },
+  handler: () => 'ok'
+});
+```
+
+`onPreResponse` is used rather than an earlier extension point because it is the
+one that also covers the responses hapi generates itself, including Boom errors.
+
+### Fetch `Headers`
+
+Anywhere responses carry a standard `Headers` -- Next.js middleware, h3 and
+Nitro, Cloudflare Workers, Deno, Bun, Elysia:
+
+```js
+import sts from 'strict-transport-security';
+import { NextResponse } from 'next/server';
+
+const applySTS = sts.getHeadersSTS({ 'max-age': { days: 30 }, includeSubDomains: true });
+
+export function middleware (request) {
+  const response = NextResponse.next();
+  applySTS(response.headers, request);
+  return response;
+}
+```
+
+The second argument is the request the headers answer. It is read only under
+`secureOnly`, where it supplies the scheme, and may be a Fetch `Request`, a
+`URL` or a URL string; `secureOnly` with no request at all throws rather than
+guess. Without `secureOnly` it can be left out.
+
+### Anything else
+
+`getSTSHeader` returns the frozen header the factories above are built on, so a
+framework with none of these shapes is still a few lines:
+
+```js
+const sts = require('strict-transport-security');
+
+const { name, value, secureOnly } = sts.getSTSHeader({ 'max-age': { days: 30 } });
+// { name: 'Strict-Transport-Security', value: 'max-age=2592000', secureOnly: false }
+```
+
+`secureOnly` is not part of the header: it is the option, telling your own
+adapter whether this header may be sent over a non-secure connection.
+
+### Responses the framework generates
+
+A 404 or a 500 served by the framework itself is a response like any other, and
+a policy that only covers your handlers is a policy with holes in it. All six
+factories above cover those too, which `test/frameworks.test.js` pins against
+each real framework.
+
 ## Options
 
 | Option | Type | Default | Description |
@@ -63,7 +192,7 @@ a `max-age` of at least one year together with `includeSubDomains`; this module 
 
 ### Invalid options
 
-`getSTS` validates its options when the middleware is created, so a bad configuration
+Every factory validates its options when it is called, so a bad configuration
 fails at startup rather than silently emitting a policy you did not intend:
 
 ```js
@@ -86,7 +215,7 @@ An upper bound of `Number.MAX_SAFE_INTEGER` comes from the header grammar. RFC 6
 `1*DIGIT`, and larger numbers either stringify in exponential notation, which no browser
 parses, or have already lost precision.
 
-`max-age: 0` is accepted — RFC 6797 defines it as the signal telling a browser to delete a
+`max-age: 0` is accepted -- RFC 6797 defines it as the signal telling a browser to delete a
 stored policy.
 
 ## Conformance
@@ -103,17 +232,34 @@ To get the conformant behaviour, set `secureOnly`:
 app.use(sts.getSTS({ 'max-age': { days: 30 }, secureOnly: true }));
 ```
 
-The connection is considered secure when Express reports `req.secure` — which, behind a proxy,
-requires [`app.set('trust proxy', ...)`](https://expressjs.com/en/guide/behind-proxies.html) —
-or when the underlying socket is encrypted.
+Each factory asks its own framework what scheme the request arrived over, so
+`secureOnly` behaves the way the rest of that application does:
+
+| Factory | Secure when |
+| --- | --- |
+| `getSTS` | `req.secure`, which behind a proxy needs [`app.set('trust proxy', ...)`](https://expressjs.com/en/guide/behind-proxies.html); otherwise an encrypted socket |
+| `getFastifySTS` | `request.protocol` is `https`, which honours `trustProxy`; otherwise an encrypted socket on `request.raw` |
+| `getKoaSTS` | `ctx.secure`, which honours `app.proxy`; otherwise `ctx.protocol`, or an encrypted socket on `ctx.req` |
+| `getHonoSTS` | the request URL's scheme is `https:` |
+| `getHapiSTS` | `request.url.protocol` is `https:`; otherwise an encrypted socket on `request.raw.req` |
+| `getHeadersSTS` | the scheme of the request passed as the second argument is `https:` |
+
+Hono and the Fetch runtimes have no trusted-proxy setting, so behind a
+TLS-terminating proxy their request URL stays `http:` and `secureOnly`
+suppresses the header. Either leave `secureOnly` off there -- browsers ignore
+the header over plain HTTP anyway -- or pass `getHeadersSTS` the URL you have
+resolved yourself.
 
 ## Development
 
-There is nothing to install -- this package has no dependencies, runtime or development.
+The library and its test suite have no dependencies at all. The real frameworks
+are only needed for `test:frameworks`, which installs them on demand with
+`--no-save`.
 
 ```
 $ npm test                # run the test suite
 $ npm run test:watch      # re-run it on every change
+$ npm run test:frameworks # install the real frameworks and test against them
 $ npm run coverage        # test suite with a coverage report
 $ npm run coverage:check  # fail below 100% lines, branches and functions
 ```
@@ -123,17 +269,26 @@ built-in coverage reporter and require Node.js 22 or later.
 
 | File | What it covers |
 | --- | --- |
-| `test/validation.test.js` | What `getSTS` rejects, by error type. |
-| `test/header.test.js` | The header value each set of options produces. |
-| `test/middleware.test.js` | The response and `next()` contract, and `secureOnly`. |
+| `test/validation.test.js` | What the factories reject, by error type. |
+| `test/header.test.js` | The header value each set of options produces, and what `getSTSHeader` compiles to. |
+| `test/middleware.test.js` | The response and `next()` contract of `getSTS`, and `secureOnly`. |
+| `test/fastify.test.js` | The fastify hook: `reply.header`, `done()`, and where it reads the scheme. |
+| `test/koa.test.js` | The koa middleware: `ctx.set`, the returned promise, and where it reads the scheme. |
+| `test/hono.test.js` | The hono middleware: `c.header`, setting before `next()`, and where it reads the scheme. |
+| `test/hapi.test.js` | The hapi extension: normal and Boom responses, `h.continue`, and where it reads the scheme. |
+| `test/headers.test.js` | `getHeadersSTS` against a real `Headers`, `Request` and `Response`. |
 | `test/http.test.js` | The header on the wire, through a real `node:http` server. |
+| `test/frameworks.test.js` | Every factory against the real Express, Fastify, Koa, Hono and Hapi, including a framework-generated 404 and a forwarded scheme. Skipped unless they are installed. |
 | `test/esm.test.mjs` | The `import` surface, which CommonJS tests cannot reach. |
-| `test/docs.test.js` | Every value and error this README documents, plus the example. |
+| `test/docs.test.js` | Every value and error this README documents, plus the examples. |
 | `test/pack.test.js` | The published tarball: its contents load and work. |
 
 Tests use a real `http.ServerResponse` rather than a stub, so `getHeader` and
 `getHeaderNames` report what a server would actually send, and no test helper stands
-between the reader and what is being asserted.
+between the reader and what is being asserted. The framework factories are tested twice:
+against doubles shaped like each framework's own response object, which is what keeps the
+default suite dependency-free, and against the real frameworks, which is the only thing
+that can tell us a framework still works the way the double assumes.
 
 Coverage counts `lib` only and is required to stay at 100% of lines, branches and
 functions. It is a floor, not a goal: a saturated percentage says nothing about whether the

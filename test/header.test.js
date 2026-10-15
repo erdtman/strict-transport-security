@@ -121,3 +121,54 @@ test('no other header is set', () => {
 
   assert.deepStrictEqual(res.getHeaderNames(), ['strict-transport-security']);
 });
+
+// getSTSHeader is the compile step every factory is built from, and the one a
+// framework with no factory here is written against, so what it returns is
+// part of the public contract.
+
+test('getSTSHeader compiles the options to the one header they are sent as', () => {
+  assert.deepStrictEqual(STS.getSTSHeader({ 'max-age': 1 }), {
+    name: 'Strict-Transport-Security',
+    value: 'max-age=1',
+    secureOnly: false
+  });
+});
+
+test('getSTSHeader compiles the default policy', () => {
+  assert.deepStrictEqual(STS.getSTSHeader(), {
+    name: 'Strict-Transport-Security',
+    value: 'max-age=2592000',
+    secureOnly: false
+  });
+});
+
+test('getSTSHeader compiles every directive', () => {
+  assert.strictEqual(
+    STS.getSTSHeader({ 'max-age': { days: 365 }, includeSubDomains: true, preload: true }).value,
+    'max-age=31536000; includeSubDomains; preload'
+  );
+});
+
+test('getSTSHeader reports secureOnly, so a hand written adapter can honour it', () => {
+  // It is not part of the header value: it says when the header may be sent.
+  assert.strictEqual(STS.getSTSHeader({ secureOnly: true }).secureOnly, true);
+});
+
+test('getSTSHeader reports a truthy secureOnly as the boolean true', () => {
+  assert.strictEqual(STS.getSTSHeader({ secureOnly: 'yes' }).secureOnly, true);
+});
+
+test('getSTSHeader is frozen, so a caller cannot rewrite a shared header', () => {
+  const header = STS.getSTSHeader({ 'max-age': 1 });
+
+  assert.ok(Object.isFrozen(header));
+  assert.throws(() => { header.value = 'max-age=0'; }, TypeError);
+});
+
+test('getSTSHeader validates the options, like every factory built on it', () => {
+  assert.throws(() => STS.getSTSHeader({ maxAge: 600 }), TypeError);
+});
+
+test('getSTSHeader rejects an out of range max-age, like every factory built on it', () => {
+  assert.throws(() => STS.getSTSHeader({ 'max-age': -1 }), RangeError);
+});
