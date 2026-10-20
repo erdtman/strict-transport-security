@@ -123,6 +123,15 @@ test('the README states the supported Node.js version from package.json', () => 
   assert.match(README, new RegExp(`Requires Node\\.js ${minimum} or later`));
 });
 
+test('CONTRIBUTING.md describes every test file, and no others', () => {
+  // The suite's own map of itself, which is the one piece of documentation a
+  // new test file is easiest to leave out of.
+  const contributing = fs.readFileSync(`${__dirname}/../CONTRIBUTING.md`, 'utf8');
+  const described = [...contributing.matchAll(/^\| `test\/([^`]+)` \| /gm)].map((match) => match[1]);
+
+  assert.deepStrictEqual(described.sort(), fs.readdirSync(__dirname).sort());
+});
+
 test('the README documents every option, and no others', () => {
   const [, section] = README.match(/\n## Options\n([\s\S]*?)\n## /);
   const rows = [...section.matchAll(/^\| `([^`]+)` \| /gm)].map((match) => match[1]);
