@@ -85,14 +85,6 @@ test('the applier holds no per-request state, so it is reusable', () => {
   assert.deepStrictEqual([...second], [...first]);
 });
 
-test('invalid options are rejected when the applier is built', () => {
-  assert.throws(() => STS.getHeadersSTS({ maxAge: 600 }), TypeError);
-});
-
-test('an invalid max-age is rejected when the applier is built', () => {
-  assert.throws(() => STS.getHeadersSTS({ 'max-age': -1 }), RangeError);
-});
-
 test('secureOnly sends the header for an https Request', () => {
   const headers = new Headers();
 

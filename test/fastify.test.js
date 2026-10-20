@@ -86,14 +86,6 @@ test('the hook holds no per-request state, so it is reusable', () => {
   assert.deepStrictEqual([...second], [...first]);
 });
 
-test('invalid options are rejected when the hook is built', () => {
-  assert.throws(() => STS.getFastifySTS({ maxAge: 600 }), TypeError);
-});
-
-test('an invalid max-age is rejected when the hook is built', () => {
-  assert.throws(() => STS.getFastifySTS({ 'max-age': -1 }), RangeError);
-});
-
 test('secureOnly sends the header when fastify reports https', () => {
   const headers = new Map();
 

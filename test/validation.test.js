@@ -160,3 +160,19 @@ test('rejects Infinity as a time unit', () => {
 test('rejects a time unit that is not a number', () => {
   assert.throws(() => STS.getSTS({ 'max-age': { days: '1' } }), TypeError);
 });
+
+// The cases above cover what is rejected, through getSTS. Every other factory
+// validates through the same compile step, so what is left to pin is that each
+// entry point does it when it is built -- which is the README's claim, and the
+// reason a malformed policy cannot reach a response. Stated once, against
+// every export, so a factory added later is covered without being added here.
+
+for (const name of Object.keys(STS)) {
+  test(`${name} rejects an unknown option when it is built`, () => {
+    assert.throws(() => STS[name]({ maxAge: 600 }), TypeError);
+  });
+
+  test(`${name} rejects an out of range max-age when it is built`, () => {
+    assert.throws(() => STS[name]({ 'max-age': -1 }), RangeError);
+  });
+}

@@ -114,14 +114,6 @@ test('the middleware holds no per-request state, so it is reusable', async () =>
   assert.deepStrictEqual([...second], [...first]);
 });
 
-test('invalid options are rejected when the middleware is built', () => {
-  assert.throws(() => STS.getHonoSTS({ 'max-age': { week: 2 } }), TypeError);
-});
-
-test('an invalid max-age is rejected when the middleware is built', () => {
-  assert.throws(() => STS.getHonoSTS({ 'max-age': Infinity }), RangeError);
-});
-
 test('secureOnly sends the header when the request URL is https', async () => {
   const headers = new Map();
 
