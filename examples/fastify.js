@@ -1,16 +1,12 @@
 const sts = require('../');
 const fastify = require('fastify')();
 
-const globalSTS = sts.getFastifySTS({ 'max-age': { days: 30 } });
-const localSTS = sts.getFastifySTS({ 'max-age': { days: 10 }, includeSubDomains: true });
+// HSTS is a per-host policy: a browser keeps one entry per host name, so one
+// hook on the instance is the whole of it. It covers the 404s and errors
+// fastify serves itself, too. See RFC 6797 section 5.3.
+fastify.addHook('onRequest', sts.getFastifySTS({ 'max-age': { days: 30 } }));
 
-// This will apply this policy to all requests
-fastify.addHook('onRequest', globalSTS);
-
-fastify.get('/', async () => 'Using global strict transport security policy!');
-
-// A route level hook runs after the instance wide one, so it wins
-fastify.get('/local', { onRequest: localSTS }, async () => 'Using path local strict transport security policy!');
+fastify.get('/', async () => 'Using the strict transport security policy!');
 
 fastify.listen({ port: 3000 }, () => {
   console.log('Example app listening on port 3000!');

@@ -49,9 +49,11 @@ test('done() is called rather than a promise returned, so it suits both hook sty
   assert.strictEqual(returned, undefined);
 });
 
-test('a route level hook overrides the instance wide one', () => {
-  // A route level hook runs after the instance wide one, so the later value is
-  // the one fastify sends, and it is sent once.
+test('two hooks leave one header, the one that ran last', () => {
+  // Stacking two is not advice: HSTS is a per-host policy, so an application
+  // sends one. But RFC 6797 section 7.1 allows only one STS header field in a
+  // response, so where two are mounted anyway the result has to be one header,
+  // and predictably the later one.
   const headers = new Map();
   const reply = { header: (name, value) => headers.set(name, value) };
 

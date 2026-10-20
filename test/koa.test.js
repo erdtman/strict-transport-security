@@ -66,9 +66,11 @@ test('the header is already set when next() runs', async () => {
   assert.strictEqual(headerDuringNext, 'max-age=1');
 });
 
-test('the inner middleware overrides the outer one', async () => {
-  // Koa nests, and koa has no router of its own, so a route local policy is
-  // the inner middleware whichever way it is dispatched.
+test('two middlewares leave one header, the inner one', async () => {
+  // Stacking two is not advice: HSTS is a per-host policy, so an application
+  // sends one. But RFC 6797 section 7.1 allows only one STS header field in a
+  // response, so where two are mounted anyway the result has to be one header,
+  // and predictably the later one.
   const headers = new Map();
   const ctx = { set: (name, value) => headers.set(name, value) };
   const local = STS.getKoaSTS({ 'max-age': 2 });

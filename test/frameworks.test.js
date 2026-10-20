@@ -17,14 +17,20 @@ const test = require('node:test');
 const assert = require('node:assert');
 const STS = require('../');
 
-// The app-wide policy, the one a route overrides it with, and an app-wide
-// policy that may only be sent over TLS.
+// The policy an application sends, a second one for the single case that
+// mounts two, and one that may only be sent over TLS.
+//
+// HSTS is a per-host policy -- a browser keeps one entry per host name, which
+// RFC 6797 section 5.3 indexes strictly by domain name -- so an application
+// sends one policy, app-wide. SECOND exists only to pin what happens when two
+// are mounted regardless: section 7.1 allows one STS header field per
+// response, so one header has to survive, and it has to be the inner one.
 const GLOBAL = { 'max-age': { days: 30 } };
-const LOCAL = { 'max-age': { days: 10 }, includeSubDomains: true };
+const SECOND = { 'max-age': { days: 10 }, includeSubDomains: true };
 const SECURE = { 'max-age': { days: 30 }, secureOnly: true };
 
 const GLOBAL_VALUE = STS.getSTSHeader(GLOBAL).value;
-const LOCAL_VALUE = STS.getSTSHeader(LOCAL).value;
+const SECOND_VALUE = STS.getSTSHeader(SECOND).value;
 
 /**
  * @param name a framework's package name
@@ -170,7 +176,7 @@ const HARNESSES = [
 async function start (t, { harness, framework }, options = {}) {
   const app = await harness.boot(framework, {
     global: harness.factory(options.global || GLOBAL),
-    local: harness.factory(LOCAL)
+    local: harness.factory(SECOND)
   });
 
   t.after(() => app.close());
@@ -191,17 +197,18 @@ for (const harness of HARNESSES) {
     assert.strictEqual(response.headers.get('strict-transport-security'), GLOBAL_VALUE);
   });
 
-  test(`${harness.label} lets a route-local policy override the app-wide one`, { skip }, async (t) => {
+  test(`${harness.label} leaves one header when a second policy is mounted further in`, { skip }, async (t) => {
     const app = await start(t, booted);
 
     const response = await app.request('/local');
 
-    assert.strictEqual(response.headers.get('strict-transport-security'), LOCAL_VALUE);
+    assert.strictEqual(response.headers.get('strict-transport-security'), SECOND_VALUE);
   });
 
   test(`${harness.label} sends the header exactly once`, { skip }, async (t) => {
-    // fetch joins repeated headers with ", ", and a valid policy value can
-    // never contain a comma, so this detects a duplicated header.
+    // RFC 6797 section 7.1: an HSTS host must include only one STS header
+    // field. fetch joins repeated headers with ", ", and a valid policy value
+    // can never contain a comma, so this detects a duplicated header.
     const app = await start(t, booted);
 
     const value = (await app.request('/local')).headers.get('strict-transport-security');
