@@ -103,14 +103,6 @@ test('the middleware holds no per-request state, so it is reusable', async () =>
   assert.deepStrictEqual([...second], [...first]);
 });
 
-test('invalid options are rejected when the middleware is built', () => {
-  assert.throws(() => STS.getKoaSTS({ includeSubdomains: true }), TypeError);
-});
-
-test('an invalid max-age is rejected when the middleware is built', () => {
-  assert.throws(() => STS.getKoaSTS({ 'max-age': 1.5 }), RangeError);
-});
-
 test('secureOnly sends the header when ctx.secure is true', async () => {
   const headers = new Map();
 

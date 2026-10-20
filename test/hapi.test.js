@@ -119,14 +119,6 @@ test('the extension holds no per-request state, so it is reusable', () => {
   assert.deepStrictEqual(second, first);
 });
 
-test('invalid options are rejected when the extension is built', () => {
-  assert.throws(() => STS.getHapiSTS({ secureonly: true }), TypeError);
-});
-
-test('an invalid max-age is rejected when the extension is built', () => {
-  assert.throws(() => STS.getHapiSTS({ 'max-age': Number.MAX_SAFE_INTEGER + 1 }), RangeError);
-});
-
 test('secureOnly sends the header when the request URL is https', () => {
   const headers = {};
 

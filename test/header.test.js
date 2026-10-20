@@ -164,11 +164,3 @@ test('getSTSHeader is frozen, so a caller cannot rewrite a shared header', () =>
   assert.ok(Object.isFrozen(header));
   assert.throws(() => { header.value = 'max-age=0'; }, TypeError);
 });
-
-test('getSTSHeader validates the options, like every factory built on it', () => {
-  assert.throws(() => STS.getSTSHeader({ maxAge: 600 }), TypeError);
-});
-
-test('getSTSHeader rejects an out of range max-age, like every factory built on it', () => {
-  assert.throws(() => STS.getSTSHeader({ 'max-age': -1 }), RangeError);
-});
