@@ -77,7 +77,11 @@ test('the header is set before next() is awaited, not after', async () => {
   assert.strictEqual(headerDuringHandler, 'max-age=1');
 });
 
-test('a route local policy wins over an app wide one', async () => {
+test('two middlewares leave one header, the inner one', async () => {
+  // Stacking two is not advice: HSTS is a per-host policy, so an application
+  // sends one. But RFC 6797 section 7.1 allows only one STS header field in a
+  // response, so where two are mounted anyway the result has to be one header,
+  // and predictably the later one.
   const headers = new Map();
   const c = { ...INSECURE, header: (name, value) => headers.set(name, value) };
   const local = STS.getHonoSTS({ 'max-age': 2 });

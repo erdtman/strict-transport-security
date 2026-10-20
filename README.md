@@ -18,25 +18,44 @@ const sts = require('strict-transport-security');
 const express = require('express');
 const app = express();
 
-const globalSTS = sts.getSTS({ 'max-age': { days: 30 } });
-const localSTS = sts.getSTS({ 'max-age': { days: 10 }, includeSubDomains: true });
-
-// This will apply this policy to all requests
-app.use(globalSTS);
+// HSTS is a per-host policy: a browser keeps one entry per host name, so one
+// policy on every response is the whole of it. See RFC 6797 section 5.3.
+app.use(sts.getSTS({ 'max-age': { days: 30 } }));
 
 app.get('/', (req, res) => {
-  res.send('Using global strict transport security policy!');
-});
-
-// This will apply the local policy just to this path, overriding the global policy
-app.get('/local', localSTS, (req, res) => {
-  res.send('Using path local strict transport security policy!');
+  res.send('Using the strict transport security policy!');
 });
 
 app.listen(3000, () => {
   console.log('Example app listening on port 3000!');
 });
 ```
+
+## One policy per host
+
+HSTS is not a per-path policy, which is worth knowing before mounting it like
+one. A browser stores and indexes HSTS policies "based strictly upon the domain
+names of the issuing HSTS Hosts" (RFC 6797
+[section 5.3](https://tools.ietf.org/html/rfc6797#section-5.3)) and updates
+that single entry whenever a response carries a `max-age` or
+`includeSubDomains` differing from the one it holds
+([section 8.1](https://tools.ietf.org/html/rfc6797#section-8.1)). What it keeps
+is the host name, an expiry and the `includeSubDomains` flag -- no path, and
+not even a port, since the policy "applies to all ports on a Known HSTS Host"
+(appendix B).
+
+So two policies on two paths of one host are not two policies. They are one
+entry, rewritten by whichever response the visitor received last: a shorter
+`max-age` on a seldom-visited path quietly shortens the protection for the
+whole host, and an `includeSubDomains` on one path asserts it for all of them.
+Send one policy on every response, which is also the "constant value into the
+future" deployment that
+[section 11.2](https://tools.ietf.org/html/rfc6797#section-11.2) describes.
+
+Mounting a factory on part of an application is still worth doing where that
+part answers for a different host name -- a vhost, or a sub-app mounted under
+its own domain -- because that is a different entry in the browser's store.
+Within one host, mount it once.
 
 ## Frameworks
 
@@ -64,10 +83,11 @@ Runnable versions of each of these are in [`examples/`](examples).
 const sts = require('strict-transport-security');
 const fastify = require('fastify')();
 
+// One hook on the instance covers every response, including the 404s and
+// errors fastify serves itself.
 fastify.addHook('onRequest', sts.getFastifySTS({ 'max-age': { days: 30 } }));
 
-// A route level hook runs after the instance wide one, so it wins.
-fastify.get('/local', { onRequest: sts.getFastifySTS({ 'max-age': { days: 10 } }) }, async () => 'ok');
+fastify.get('/', async () => 'ok');
 ```
 
 ### Koa
@@ -77,13 +97,8 @@ const sts = require('strict-transport-security');
 const Koa = require('koa');
 const app = new Koa();
 
-const localSTS = sts.getKoaSTS({ 'max-age': { days: 10 } });
-
+// Outermost, so it covers whatever the rest of the stack answers with.
 app.use(sts.getKoaSTS({ 'max-age': { days: 30 } }));
-
-// Koa has no router of its own, so a route local policy is dispatched by path.
-// Whichever way it is reached, the more specific middleware is the inner one.
-app.use((ctx, next) => (ctx.path === '/local' ? localSTS(ctx, next) : next()));
 ```
 
 ### Hono
@@ -94,12 +109,12 @@ const { Hono } = require('hono');
 const app = new Hono();
 
 app.use('*', sts.getHonoSTS({ 'max-age': { days: 30 } }));
-app.get('/local', sts.getHonoSTS({ 'max-age': { days: 10 } }), (c) => c.text('ok'));
+app.get('/', (c) => c.text('ok'));
 ```
 
 The header is set before `next()`, not after, because Hono's response phase
-unwinds outermost-last: setting it afterwards would let the app-wide policy
-overwrite the route-local one.
+unwinds outermost-last: set afterwards, an app-wide policy would overwrite one
+mounted further in, the opposite of how every other framework here behaves.
 
 ### Hapi
 
@@ -110,12 +125,7 @@ const server = Hapi.server({ port: 3000 });
 
 server.ext('onPreResponse', sts.getHapiSTS({ 'max-age': { days: 30 } }));
 
-server.route({
-  method: 'GET',
-  path: '/local',
-  options: { ext: { onPreResponse: { method: sts.getHapiSTS({ 'max-age': { days: 10 } }) } } },
-  handler: () => 'ok'
-});
+server.route({ method: 'GET', path: '/', handler: () => 'ok' });
 ```
 
 `onPreResponse` is used rather than an earlier extension point because it is the
@@ -278,7 +288,7 @@ built-in coverage reporter and require Node.js 22 or later.
 | `test/hapi.test.js` | The hapi extension: normal and Boom responses, `h.continue`, and where it reads the scheme. |
 | `test/headers.test.js` | `getHeadersSTS` against a real `Headers`, `Request` and `Response`. |
 | `test/http.test.js` | The header on the wire, through a real `node:http` server. |
-| `test/frameworks.test.js` | Every factory against the real Express, Fastify, Koa, Hono and Hapi, including a framework-generated 404 and a forwarded scheme. Skipped unless they are installed. |
+| `test/frameworks.test.js` | Every factory against the real Express, Fastify, Koa, Hono and Hapi, including a framework-generated 404, a forwarded scheme, and the one header RFC 6797 section 7.1 allows when two are mounted. Skipped unless they are installed. |
 | `test/esm.test.mjs` | The `import` surface, which CommonJS tests cannot reach. |
 | `test/docs.test.js` | Every value and error this README documents, plus the examples. |
 | `test/pack.test.js` | The published tarball: its contents load and work. |

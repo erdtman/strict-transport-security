@@ -82,7 +82,11 @@ test('headers belonging to someone else are left alone', () => {
   });
 });
 
-test('a route level extension overrides the server wide one', () => {
+test('two extensions leave one header, the one that ran last', () => {
+  // Stacking two is not advice: HSTS is a per-host policy, so an application
+  // sends one. But RFC 6797 section 7.1 allows only one STS header field in a
+  // response, so where two are mounted anyway the result has to be one header,
+  // and predictably the later one.
   const headers = {};
   const request = { ...SECURE, response: { headers } };
 

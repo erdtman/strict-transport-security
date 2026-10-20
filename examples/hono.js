@@ -4,16 +4,11 @@ const { Hono } = require('hono');
 const { serve } = require('@hono/node-server');
 const app = new Hono();
 
-const globalSTS = sts.getHonoSTS({ 'max-age': { days: 30 } });
-const localSTS = sts.getHonoSTS({ 'max-age': { days: 10 }, includeSubDomains: true });
+// HSTS is a per-host policy: a browser keeps one entry per host name, so one
+// middleware on '*' is the whole of it. See RFC 6797 section 5.3.
+app.use('*', sts.getHonoSTS({ 'max-age': { days: 30 } }));
 
-// This will apply this policy to all requests
-app.use('*', globalSTS);
-
-app.get('/', (c) => c.text('Using global strict transport security policy!'));
-
-// This will apply the local policy just to this path, overriding the global one
-app.get('/local', localSTS, (c) => c.text('Using path local strict transport security policy!'));
+app.get('/', (c) => c.text('Using the strict transport security policy!'));
 
 serve({ fetch: app.fetch, port: 3000 }, () => {
   console.log('Example app listening on port 3000!');

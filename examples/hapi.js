@@ -2,27 +2,17 @@ const sts = require('../');
 const Hapi = require('@hapi/hapi');
 const server = Hapi.server({ port: 3000 });
 
-const globalSTS = sts.getHapiSTS({ 'max-age': { days: 30 } });
-const localSTS = sts.getHapiSTS({ 'max-age': { days: 10 }, includeSubDomains: true });
+// HSTS is a per-host policy: a browser keeps one entry per host name, so one
+// extension is the whole of it. onPreResponse is the extension point that also
+// covers the responses hapi generates itself, such as a 404.
+// See RFC 6797 section 5.3.
+server.ext('onPreResponse', sts.getHapiSTS({ 'max-age': { days: 30 } }));
 
-// This will apply this policy to all requests. onPreResponse is the extension
-// point that also covers the responses hapi generates itself, such as a 404.
-server.ext('onPreResponse', globalSTS);
-
-server.route([
-  {
-    method: 'GET',
-    path: '/',
-    handler: () => 'Using global strict transport security policy!'
-  },
-  {
-    method: 'GET',
-    path: '/local',
-    // A route level extension runs after the server wide one, so it wins
-    options: { ext: { onPreResponse: { method: localSTS } } },
-    handler: () => 'Using path local strict transport security policy!'
-  }
-]);
+server.route({
+  method: 'GET',
+  path: '/',
+  handler: () => 'Using the strict transport security policy!'
+});
 
 server.start().then(() => {
   console.log(`Example app listening on ${server.info.uri}`);
