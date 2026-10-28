@@ -1,7 +1,7 @@
 {
   "name": "strict-transport-security",
   "description": "Middleware to add a Strict-Transport-Security header, on Express, Connect, Fastify, Koa, Hono, Hapi, or anything that can set a header.",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "license": "MIT",
   "author": {
     "name": "Samuel Erdtman",
